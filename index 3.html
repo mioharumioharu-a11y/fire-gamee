@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>消防隊シミュレーター 完成版</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;height:100%;background:#060606;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;overflow:hidden}#app{max-width:460px;height:100vh;margin:0 auto;background:#101010;position:relative}header{height:98px;padding:10px 14px;background:linear-gradient(135deg,#6b0000,#f44336);display:flex;justify-content:space-between;align-items:center}h1{font-size:21px;margin:0}#mission{font-size:13px;margin-top:5px;line-height:1.35}#emoji{font-size:44px}canvas{display:block;width:100%;height:calc(100vh - 222px);background:#87dfff;touch-action:none}#hud{height:58px;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:6px;background:#181818;font-size:11px}#hud div{background:#292929;border-radius:8px;display:flex;align-items:center;justify-content:center;text-align:center}#controls{height:66px;background:#0f0f0f;display:flex;justify-content:center;align-items:center;gap:8px}button{width:82px;height:50px;border:0;border-radius:14px;font-size:18px;font-weight:700;background:#f2f2f2;color:#111;box-shadow:inset 0 -3px 0 rgba(0,0,0,.22)}#action{background:#4fc3f7}#siren{background:#ffd54f}#overlay{position:absolute;inset:0;background:rgba(0,0,0,.78);display:flex;align-items:center;justify-content:center;padding:20px}.panel{background:#fff;color:#111;border-radius:22px;padding:22px;text-align:center;width:100%}.panel h2{margin:0 0 12px;font-size:25px}.panel p{font-size:15px;line-height:1.55}.panel button{background:#e53935;color:white;width:100%;margin-top:12px}
+</style>
+</head>
+<body>
+<div id="app">
+<header><div><h1>消防隊シミュレーター</h1><div id="mission">119番通報：建物火災。現場へ急行せよ。</div></div><div id="emoji">🚒</div></header>
+<canvas id="game"></canvas>
+<div id="hud"><div>任務<br><span id="phase">出動</span></div><div>点数<br><span id="score">0</span></div><div>体力<br><span id="life">3</span></div><div>残火<br><span id="fireCount">0</span></div><div>水量<br><span id="waterCount">100</span></div></div>
+<div id="controls"><button id="left">◀</button><button id="siren">🚨</button><button id="action">放水</button><button id="right">▶</button></div>
+<div id="overlay"><div class="panel"><h2>🚨 出動指令</h2><p>建物火災が発生。消防車で現場へ急行し、火災を消火。その後、要救助者を救出してください。</p><button id="start">出動する</button></div></div>
+</div>
+<script>
+const canvas=document.getElementById("game"),ctx=canvas.getContext("2d");
+const phaseEl=document.getElementById("phase"),scoreEl=document.getElementById("score"),lifeEl=document.getElementById("life"),fireCountEl=document.getElementById("fireCount"),waterCountEl=document.getElementById("waterCount"),mission=document.getElementById("mission"),overlay=document.getElementById("overlay");
+let W,H,running=false,phase="drive",score=0,life=3,distance=0,tick=0,water=100,sirenOn=true;
+let truck={x:150,y:0,w:62,h:46},cars=[],fires=[],waters=[],victims=[];
+function resize(){let r=canvas.getBoundingClientRect();canvas.width=r.width*devicePixelRatio;canvas.height=r.height*devicePixelRatio;ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);W=r.width;H=r.height;truck.y=H-72;truck.x=Math.min(truck.x,W-truck.w-6)}
+addEventListener("resize",resize);resize();
+function rand(a,b){return Math.random()*(b-a)+a}
+function hud(){phaseEl.textContent=phase==="drive"?"出動":phase==="fire"?"消火":phase==="rescue"?"救助":"完了";scoreEl.textContent=score;lifeEl.textContent=life;fireCountEl.textContent=fires.length;waterCountEl.textContent=water}
+function start(){running=true;phase="drive";score=0;life=3;distance=0;water=100;cars=[];fires=[];waters=[];victims=[];overlay.style.display="none";mission.textContent="緊急走行中。車を避けて現場へ急行！";hud()}
+document.getElementById("start").onclick=start;
+function move(dx){if(!running)return;truck.x=Math.max(6,Math.min(W-truck.w-6,truck.x+dx))}
+function action(){if(!running)return;if(phase==="drive"){score+=1;mission.textContent="安全確認しながら緊急走行！"}else if(phase==="fire"){if(water<=0){mission.textContent="水量不足！少し待って水を回復。";return}water=Math.max(0,water-3);waters.push({x:truck.x+truck.w/2,y:truck.y-10,r:7,vy:-9})}else if(phase==="rescue"){for(const v of victims){if(!v.saved&&Math.abs(v.x-truck.x)<65){v.saved=true;score+=30;mission.textContent="要救助者を救出！救急隊へ引き継ぎ。"}}if(victims.every(v=>v.saved))complete()}hud()}
+function toggleSiren(){sirenOn=!sirenOn;mission.textContent=sirenOn?"サイレンON。緊急走行！":"サイレンOFF。安全確認。"}
+["left","right","action","siren"].forEach(id=>{let e=document.getElementById(id);e.onclick=()=>id==="left"?move(-36):id==="right"?move(36):id==="siren"?toggleSiren():action();e.addEventListener("touchstart",ev=>{ev.preventDefault();id==="left"?move(-36):id==="right"?move(36):id==="siren"?toggleSiren():action()})});
+canvas.addEventListener("touchmove",e=>{if(!running)return;e.preventDefault();let r=canvas.getBoundingClientRect(),x=e.touches[0].clientX-r.left;truck.x=Math.max(6,Math.min(W-truck.w-6,x-truck.w/2))},{passive:false});
+function fireScene(){phase="fire";mission.textContent="現場到着。放水して火を消せ！";cars=[];waters=[];fires=[];water=100;for(let i=0;i<11;i++)fires.push({x:rand(35,W-35),y:rand(65,H*.56),hp:2,size:rand(30,46)});hud()}
+function rescueScene(){phase="rescue";mission.textContent="火災鎮圧。要救助者の近くで救助ボタン！";victims=[{x:W*.22,y:H*.45,saved:false},{x:W*.74,y:H*.49,saved:false},{x:W*.48,y:H*.38,saved:false}];hud()}
+function complete(){phase="complete";running=false;hud();mission.textContent="任務完了！";setTimeout(()=>{overlay.style.display="flex";document.querySelector(".panel h2").textContent="🏆 任務完了";document.querySelector(".panel p").textContent=`スコア ${score} 点。建物火災を鎮圧し、要救助者を救出しました。`;document.querySelector(".panel button").textContent="再出動する"},500)}
+function fail(){running=false;overlay.style.display="flex";document.querySelector(".panel h2").textContent="🚨 任務失敗";document.querySelector(".panel p").textContent=`体力がなくなりました。スコア ${score} 点。`;document.querySelector(".panel button").textContent="再出動する"}
+function road(){ctx.fillStyle="#5f5f5f";ctx.fillRect(0,0,W,H);ctx.fillStyle="#3b3b3b";ctx.fillRect(W*.16,0,W*.68,H);ctx.strokeStyle="#fff";ctx.lineWidth=4;ctx.setLineDash([22,18]);ctx.beginPath();ctx.moveTo(W*.5,0);ctx.lineTo(W*.5,H);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle="#2e7d32";ctx.fillRect(0,0,W*.16,H);ctx.fillRect(W*.84,0,W*.16,H)}
+function cityScene(){ctx.fillStyle="#8fdfff";ctx.fillRect(0,0,W,H*.58);ctx.fillStyle="#555";ctx.fillRect(0,H*.58,W,H*.42);ctx.fillStyle="#7b3f00";ctx.fillRect(W*.08,H*.15,W*.84,H*.32);ctx.fillStyle="#3e2723";ctx.fillRect(W*.1,H*.18,W*.8,H*.08);ctx.fillStyle="#222";ctx.fillRect(W*.18,H*.24,W*.18,H*.12);ctx.fillRect(W*.64,H*.24,W*.18,H*.12);ctx.fillRect(W*.43,H*.34,W*.14,H*.13);ctx.fillStyle="#555";ctx.fillRect(0,H*.72,W,H*.28)}
+function drawTruck(){if(sirenOn){ctx.fillStyle=tick%24<12?"#ff1744":"#1e88e5";ctx.fillRect(truck.x+22,truck.y-8,18,8);ctx.globalAlpha=.18;ctx.beginPath();ctx.arc(truck.x+31,truck.y-8,38,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1}ctx.fillStyle="#d50000";ctx.fillRect(truck.x,truck.y,truck.w,truck.h);ctx.fillStyle="#fff";ctx.fillRect(truck.x+8,truck.y+9,18,13);ctx.fillRect(truck.x+36,truck.y+9,16,13);ctx.fillStyle="#111";ctx.beginPath();ctx.arc(truck.x+15,truck.y+45,8,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(truck.x+49,truck.y+45,8,0,Math.PI*2);ctx.fill();ctx.font="24px serif";ctx.fillText("🚒",truck.x+14,truck.y+33)}
+function loop(){tick++;if(running&&phase==="fire"&&water<100&&tick%20===0){water++;hud()}if(phase==="drive"){road();if(running){distance+=sirenOn?1.45:1.05;if(Math.random()<.026)cars.push({x:rand(22,W-55),y:-60,s:rand(2.4,4.5)});if(distance>800)fireScene()}for(let i=cars.length-1;i>=0;i--){let c=cars[i];c.y+=c.s;ctx.font="34px serif";ctx.fillText("🚗",c.x,c.y);if(c.y>H+50)cars.splice(i,1);if(Math.abs(c.x+18-(truck.x+31))<38&&Math.abs(c.y-truck.y)<42){cars.splice(i,1);life--;mission.textContent="接触！安全運転で急行せよ。";if(life<=0)fail();hud()}}ctx.fillStyle="#fff";ctx.font="16px sans-serif";ctx.fillText("現場まで "+Math.max(0,Math.floor((800-distance)/10))+"m",16,28)}else{cityScene();if(phase==="fire"){for(let i=waters.length-1;i>=0;i--){let w=waters[i];w.y+=w.vy;ctx.fillStyle="#03a9f4";ctx.beginPath();ctx.arc(w.x,w.y,w.r,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#81d4fa";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(truck.x+truck.w/2,truck.y);ctx.lineTo(w.x,w.y);ctx.stroke();if(w.y<-15)waters.splice(i,1)}for(let i=fires.length-1;i>=0;i--){let f=fires[i];ctx.font=f.size+"px serif";ctx.fillText("🔥",f.x-f.size/2,f.y);ctx.fillStyle="rgba(0,0,0,.24)";ctx.beginPath();ctx.arc(f.x,f.y-28,f.size*.62,0,Math.PI*2);ctx.fill();for(let j=waters.length-1;j>=0;j--){let w=waters[j],dx=f.x-w.x,dy=f.y-w.y;if(Math.sqrt(dx*dx+dy*dy)<f.size){waters.splice(j,1);f.hp--;score+=5;if(f.hp<=0)fires.splice(i,1);hud();break}}}if(fires.length===0&&running)rescueScene()}if(phase==="rescue"){ctx.font="32px serif";for(const v of victims){if(!v.saved)ctx.fillText("🧍",v.x,v.y);else{ctx.fillStyle="#fff";ctx.font="14px sans-serif";ctx.fillText("救助済",v.x-10,v.y)}}ctx.font="28px serif";ctx.fillText("🚑",W-70,H-45)}}drawTruck();requestAnimationFrame(loop)}
+loop();
+</script>
+</body>
+</html>
