@@ -500,7 +500,7 @@
 
     .result-band {
       display: none;
-      grid-template-columns: 132px 1fr auto;
+      grid-template-columns: 156px 1fr auto;
       gap: 18px;
       align-items: center;
       min-height: 142px;
@@ -515,8 +515,8 @@
     }
 
     .illustration {
-      width: 132px;
-      height: 108px;
+      width: 156px;
+      height: 124px;
       border-radius: 8px;
       background: #fff;
       border: 1px solid #d9e5f0;
@@ -937,27 +937,41 @@
 
       .certificate {
         min-height: 0;
-        padding: 18px;
+        padding: 14px;
+        border-width: 4px;
+      }
+
+      .certificate::before {
+        inset: 8px;
+        border-width: 2px;
+      }
+
+      .certificate::after {
+        inset: 15px;
       }
 
       .certificate-inner {
+        display: flex;
+        flex-direction: column;
         min-height: 0;
-        padding: 48px 18px 34px;
+        gap: 12px;
+        padding: 24px 18px 26px;
       }
 
       .certificate-title h2 {
-        font-size: 3.2rem;
+        font-size: 2.9rem;
       }
 
       .certificate-no {
-        top: 20px;
-        right: 22px;
+        position: static;
+        align-self: flex-end;
         font-size: 0.92rem;
+        padding: 6px 10px;
       }
 
       .certificate-emblem {
-        width: 150px;
-        height: 112px;
+        width: 132px;
+        height: 100px;
       }
 
       .certificate-emblem img {
@@ -966,24 +980,47 @@
       }
 
       .certificate-name {
-        font-size: 1.4rem;
+        width: 100%;
+        font-size: 1.2rem;
       }
 
       .certificate-body {
-        font-size: 0.96rem;
+        width: 100%;
+        font-size: 0.9rem;
+        line-height: 1.75;
       }
 
       .certificate-meta {
-        gap: 8px;
-        font-size: 0.94rem;
+        display: grid;
+        width: 100%;
+        gap: 7px;
+        padding: 12px 0;
+        font-size: 0.9rem;
       }
 
       .certificate-meta span + span::before {
-        margin-right: 8px;
+        content: none;
+      }
+
+      .certificate-date {
+        font-size: 1rem;
       }
 
       .certificate-seal {
-        font-size: 1.5rem;
+        font-size: 1.25rem;
+      }
+
+      .certificate-corner {
+        width: 32px;
+        height: 32px;
+      }
+
+      .certificate-corner::before {
+        width: 22px;
+      }
+
+      .certificate-corner::after {
+        height: 22px;
       }
 
       .question-text {
@@ -1013,7 +1050,7 @@
 
       .illustration {
         width: 100%;
-        height: 116px;
+        height: 140px;
       }
     }
 
@@ -2451,7 +2488,6 @@ window.QUIZ_QUESTIONS = [
   <script>
     (() => {
       const PARTICIPANT_STORAGE_KEY = "higashiosaka_preventive_emergency_participants";
-      const PARTICIPANT_REGISTERED_KEY = "higashiosaka_preventive_emergency_participant_registered";
       const CERTIFICATE_STORAGE_KEY = "higashiosaka_preventive_emergency_certificates";
       const questions = Array.isArray(window.QUIZ_QUESTIONS) ? window.QUIZ_QUESTIONS : [];
       const MODES = {
@@ -2499,6 +2535,7 @@ window.QUIZ_QUESTIONS = [
       let currentMode = "preventive";
       let currentOptions = [];
       let lastCorrectDisplayKey = "";
+      let participantRegisteredThisVisit = false;
       let answered = false;
 
       const tips = {
@@ -2530,42 +2567,20 @@ window.QUIZ_QUESTIONS = [
         }
       }
 
-      function readStoredFlag(key) {
-        try {
-          return localStorage.getItem(key) === "1";
-        } catch (error) {
-          return false;
-        }
-      }
-
-      function writeStoredFlag(key) {
-        try {
-          localStorage.setItem(key, "1");
-        } catch (error) {
-          // localStorageが使えない環境では画面上だけ更新します。
-        }
-      }
-
       function writeParticipantCount(value) {
         writeStoredCount(PARTICIPANT_STORAGE_KEY, value);
         el.participantCount.textContent = String(value);
       }
 
       function initializeParticipantCount() {
-        const current = readStoredCount(PARTICIPANT_STORAGE_KEY);
-        if (!readStoredFlag(PARTICIPANT_REGISTERED_KEY) && current > 0) {
-          writeStoredFlag(PARTICIPANT_REGISTERED_KEY);
-          writeParticipantCount(1);
-          return;
-        }
-        writeParticipantCount(current);
+        el.participantCount.textContent = String(readStoredCount(PARTICIPANT_STORAGE_KEY));
       }
 
       function registerParticipantOnce() {
-        if (readStoredFlag(PARTICIPANT_REGISTERED_KEY)) return;
+        if (participantRegisteredThisVisit) return;
+        participantRegisteredThisVisit = true;
         const next = readStoredCount(PARTICIPANT_STORAGE_KEY) + 1;
         writeParticipantCount(next);
-        writeStoredFlag(PARTICIPANT_REGISTERED_KEY);
       }
 
       function issueCertificateNumber() {
@@ -2754,49 +2769,64 @@ window.QUIZ_QUESTIONS = [
       }
 
       function illustrationFor(category) {
+        if (category === "予防救急の基本") {
+          return svg(`
+            <rect width="132" height="108" fill="#eef7ff"/>
+            <path d="M19 57 l47 -35 47 35 v40 h-94z" fill="#ffffff" stroke="#075ea8" stroke-width="5" stroke-linejoin="round"/>
+            <path d="M66 44 l24 8 v15 c0 15 -10 24 -24 30 -14 -6 -24 -15 -24 -30 v-15z" fill="#eafaf3" stroke="#12805c" stroke-width="4" stroke-linejoin="round"/>
+            <path d="M56 68 l7 7 14 -18" fill="none" stroke="#12805c" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="34" cy="76" r="8" fill="#bfe8ff" stroke="#075ea8" stroke-width="3"/>
+            <path d="M31 72 c4 -8 6 -10 9 -15 4 8 7 11 7 17 0 6 -5 10 -10 10 -3 0 -5 -1 -6 -3" fill="#bfe8ff" stroke="#075ea8" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M91 81 h20 M101 71 v20" stroke="#dc2537" stroke-width="6" stroke-linecap="round"/>
+          `);
+        }
         if (category === "熱中症") {
           return svg(`
-            <rect width="132" height="108" fill="#fff6cf"/>
-            <circle cx="103" cy="25" r="16" fill="#ffd23f" stroke="#d39400" stroke-width="4"/>
-            <path d="M25 28 h24 a8 8 0 0 1 8 8 v46 a8 8 0 0 1 -8 8 h-24 a8 8 0 0 1 -8 -8 v-46 a8 8 0 0 1 8 -8z" fill="#bfe8ff" stroke="#075ea8" stroke-width="4"/>
-            <path d="M25 24 h24 v-9 h-24z" fill="#075ea8"/>
-            <path d="M24 58 h28" stroke="#075ea8" stroke-width="5"/>
-            <path d="M78 63 c10 -8 23 -8 33 0" fill="none" stroke="#dc2537" stroke-width="6" stroke-linecap="round"/>
+            <rect width="132" height="108" fill="#fff7d6"/>
+            <circle cx="105" cy="25" r="15" fill="#ffd23f" stroke="#d39400" stroke-width="4"/>
+            <path d="M105 4 v8 M105 38 v9 M84 25 h8 M118 25 h8 M91 11 l6 6 M119 11 l-6 6 M91 39 l6 -6 M119 39 l-6 -6" stroke="#d39400" stroke-width="4" stroke-linecap="round"/>
+            <path d="M25 25 h27 a8 8 0 0 1 8 8 v53 a8 8 0 0 1 -8 8 h-27 a8 8 0 0 1 -8 -8 v-53 a8 8 0 0 1 8 -8z" fill="#bfe8ff" stroke="#075ea8" stroke-width="5"/>
+            <path d="M27 20 h23 v-8 h-23z" fill="#075ea8"/>
+            <path d="M23 58 h33" stroke="#075ea8" stroke-width="5"/>
+            <path d="M81 70 c9 -7 22 -7 31 0" fill="none" stroke="#dc2537" stroke-width="6" stroke-linecap="round"/>
+            <path d="M88 50 h18 M97 41 v18" stroke="#12805c" stroke-width="5" stroke-linecap="round"/>
           `);
         }
         if (category === "ヒートショック") {
           return svg(`
             <rect width="132" height="108" fill="#eef7ff"/>
-            <rect x="18" y="54" width="78" height="30" rx="8" fill="#ffffff" stroke="#075ea8" stroke-width="4"/>
-            <path d="M25 55 v-16 a12 12 0 0 1 24 0" fill="none" stroke="#075ea8" stroke-width="5" stroke-linecap="round"/>
-            <circle cx="103" cy="33" r="15" fill="#dc2537"/>
-            <rect x="99" y="18" width="8" height="48" rx="4" fill="#dc2537"/>
-            <path d="M32 90 h56" stroke="#8cc9ef" stroke-width="7" stroke-linecap="round"/>
-            <path d="M64 26 c0 -10 10 -10 10 -20" fill="none" stroke="#dc2537" stroke-width="4" stroke-linecap="round"/>
-            <path d="M78 34 c0 -8 8 -8 8 -16" fill="none" stroke="#dc2537" stroke-width="4" stroke-linecap="round"/>
+            <rect x="12" y="16" width="42" height="76" rx="8" fill="#e7f3ff" stroke="#075ea8" stroke-width="4"/>
+            <path d="M25 52 h18 M34 43 v18 M25 43 l18 18 M43 43 l-18 18" stroke="#075ea8" stroke-width="3" stroke-linecap="round"/>
+            <rect x="74" y="46" width="42" height="28" rx="8" fill="#ffffff" stroke="#dc2537" stroke-width="4"/>
+            <path d="M81 47 v-13 a10 10 0 0 1 20 0" fill="none" stroke="#dc2537" stroke-width="4" stroke-linecap="round"/>
+            <path d="M82 80 h29" stroke="#8cc9ef" stroke-width="6" stroke-linecap="round"/>
+            <path d="M61 46 h14 M70 38 l8 8 -8 8" fill="none" stroke="#c7a046" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="111" cy="25" r="8" fill="#ffd23f" stroke="#d39400" stroke-width="3"/>
+            <path d="M109 35 v24" stroke="#dc2537" stroke-width="5" stroke-linecap="round"/>
           `);
         }
         if (category === "窒息・誤嚥") {
           return svg(`
-            <rect width="132" height="108" fill="#fff4f5"/>
-            <circle cx="38" cy="43" r="19" fill="#ffd9b2" stroke="#8b4b22" stroke-width="4"/>
-            <path d="M29 61 c4 11 15 11 19 0" fill="none" stroke="#8b4b22" stroke-width="4" stroke-linecap="round"/>
-            <path d="M78 28 h30 l-15 27z" fill="#ffd23f" stroke="#9a7300" stroke-width="4"/>
-            <path d="M93 37 v9" stroke="#10243b" stroke-width="4" stroke-linecap="round"/>
-            <circle cx="93" cy="51" r="2.8" fill="#10243b"/>
-            <rect x="22" y="76" width="70" height="11" rx="5" fill="#12805c"/>
-            <path d="M53 37 h21" stroke="#dc2537" stroke-width="5" stroke-linecap="round"/>
-            <path d="M64 27 v21" stroke="#dc2537" stroke-width="5" stroke-linecap="round"/>
+            <rect width="132" height="108" fill="#fff7ed"/>
+            <ellipse cx="63" cy="68" rx="43" ry="22" fill="#ffffff" stroke="#075ea8" stroke-width="5"/>
+            <rect x="39" y="55" width="12" height="12" rx="3" fill="#ffd23f" stroke="#9a7300" stroke-width="3"/>
+            <rect x="56" y="50" width="12" height="12" rx="3" fill="#e6c9a8" stroke="#8b4b22" stroke-width="3"/>
+            <rect x="74" y="58" width="12" height="12" rx="3" fill="#dc2537" stroke="#8b1c28" stroke-width="3"/>
+            <path d="M93 27 l18 18 -39 39 -18 -18z" fill="#d9e5f0" stroke="#596879" stroke-width="4" stroke-linejoin="round"/>
+            <path d="M86 34 l18 18" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+            <path d="M25 25 c14 -12 30 -12 44 0" fill="none" stroke="#12805c" stroke-width="5" stroke-linecap="round"/>
+            <path d="M25 32 l11 10 20 -23" fill="none" stroke="#12805c" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
           `);
         }
         if (category === "転倒・転落") {
           return svg(`
             <rect width="132" height="108" fill="#f2fbf6"/>
-            <path d="M20 82 h82 v13 h-82z M38 64 h82 v13 h-82z M56 46 h56 v13 h-56z" fill="#d9e5f0" stroke="#075ea8" stroke-width="3"/>
-            <circle cx="35" cy="28" r="11" fill="#ffd9b2" stroke="#8b4b22" stroke-width="3"/>
-            <path d="M44 43 l23 11 15 -10" fill="none" stroke="#dc2537" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M62 55 l-13 20 M67 56 l6 22" fill="none" stroke="#10243b" stroke-width="6" stroke-linecap="round"/>
-            <path d="M101 22 l8 8 m0 -8 l-8 8" stroke="#ffd23f" stroke-width="5" stroke-linecap="round"/>
+            <path d="M28 83 h76 v12 h-76z M44 66 h60 v12 h-60z M60 49 h44 v12 h-44z" fill="#d9e5f0" stroke="#075ea8" stroke-width="3"/>
+            <path d="M25 40 h80" stroke="#12805c" stroke-width="6" stroke-linecap="round"/>
+            <circle cx="39" cy="30" r="10" fill="#ffd9b2" stroke="#8b4b22" stroke-width="3"/>
+            <path d="M42 43 l20 10 13 -12" fill="none" stroke="#10243b" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M59 55 l-11 21 M64 56 l8 18" fill="none" stroke="#10243b" stroke-width="6" stroke-linecap="round"/>
+            <path d="M92 24 l7 7 15 -17" fill="none" stroke="#12805c" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
           `);
         }
         if (category === "心筋梗塞・脳卒中") {
