@@ -2401,11 +2401,11 @@
 
       .app.is-quiz .mascot-card {
         display: grid;
-        grid-template-columns: 92px minmax(0, 1fr);
-        gap: 10px;
+        grid-template-columns: 118px minmax(0, 1fr);
+        gap: 12px;
         align-items: center;
-        min-height: 112px;
-        padding: 8px;
+        min-height: 136px;
+        padding: 10px;
         border: 1px solid #d7e5f2;
         border-radius: 14px;
         background: linear-gradient(180deg, #f8fbff, #eef7ff);
@@ -2413,8 +2413,8 @@
 
       .app.is-quiz .mascot-card img {
         order: -1;
-        width: 92px;
-        max-height: 102px;
+        width: 118px;
+        max-height: 128px;
         object-fit: contain;
       }
 
@@ -2462,7 +2462,7 @@
       }
 
       .safety-panel {
-        gap: 7px;
+        gap: 6px;
         padding: 10px;
         border-radius: 14px;
         background: #f8fbff;
@@ -2481,9 +2481,7 @@
       }
 
       .safety-message {
-        padding: 6px 8px;
-        font-size: 0.8rem;
-        line-height: 1.45;
+        display: none;
       }
 
       .question-card {
@@ -4559,6 +4557,18 @@ window.QUIZ_QUESTIONS = [
         return ranks.find((rank) => value >= rank.min && value <= rank.max) || ranks[0];
       }
 
+      function rankForSavedProgress() {
+        const bestScore = readStoredCount(BEST_SCORE_STORAGE_KEY);
+        const savedLevel = readStoredCount(BEST_RANK_LEVEL_STORAGE_KEY);
+        const savedLabel = normalizeRankLabel(readStoredText(BEST_RANK_STORAGE_KEY, ""));
+        const scoreRank = rankForScore(bestScore);
+        const labelRank = ranks.find((rank) => rank.label === savedLabel);
+        const levelRank = ranks.find((rank) => rank.level === savedLevel);
+        return [scoreRank, labelRank, levelRank]
+          .filter(Boolean)
+          .sort((a, b) => b.level - a.level)[0] || ranks[0];
+      }
+
       function normalizeRankLabel(label) {
         const legacyLabels = {
           "見習い救急隊": "見習い救急隊員",
@@ -4634,14 +4644,22 @@ window.QUIZ_QUESTIONS = [
 
       function updateBestDisplay() {
         const bestScore = readStoredCount(BEST_SCORE_STORAGE_KEY);
-        let bestRank = normalizeRankLabel(readStoredText(BEST_RANK_STORAGE_KEY, ranks[0].label));
-        if (bestRank !== readStoredText(BEST_RANK_STORAGE_KEY, ranks[0].label)) {
-          writeStoredText(BEST_RANK_STORAGE_KEY, bestRank);
+        const bestRank = rankForSavedProgress();
+        if (bestRank.label !== normalizeRankLabel(readStoredText(BEST_RANK_STORAGE_KEY, ""))) {
+          writeStoredText(BEST_RANK_STORAGE_KEY, bestRank.label);
+          writeStoredCount(BEST_RANK_LEVEL_STORAGE_KEY, bestRank.level);
         }
-        el.sideBest.textContent = `${bestScore}問 / ${bestRank}`;
+        el.sideBest.textContent = `${bestScore}問 / ${bestRank.label}`;
         if (el.recordLine) {
           el.recordLine.textContent = "";
         }
+      }
+
+      function updateHomeRank() {
+        const rank = rankForSavedProgress();
+        const bestScore = readStoredCount(BEST_SCORE_STORAGE_KEY);
+        el.sideRank.textContent = rank.label;
+        updateMascotRank(rank, bestScore);
       }
 
       function writeParticipantCount(value) {
@@ -4855,11 +4873,7 @@ window.QUIZ_QUESTIONS = [
         el.feedbackTitle.textContent = pickPhrase(isCorrect ? correctTitles : incorrectTitles, q);
         el.feedbackText.textContent = `${pickPhrase(answerLeads, q)}「${correct.text}」。${tips[q.category] || tips[q.section] || "予防と通報のポイントを日ごろから確認しましょう。"}`;
         el.illustration.innerHTML = illustrationFor(q.category);
-        el.safetyMessage.textContent = reachedNow
-          ? "まちの安全を守りました！"
-          : isCorrect
-            ? "市民の安全が上がりました！正しい判断です！"
-            : "惜しい！ここを覚えよう！";
+        el.safetyMessage.textContent = "";
         el.nextButton.textContent = index + 1 >= deck.length ? "結果へ" : "次へ";
         el.nextButton.disabled = false;
         el.resultBand.classList.add("show");
@@ -4964,8 +4978,7 @@ window.QUIZ_QUESTIONS = [
         el.sideTotal.textContent = "50問";
         el.sideScore.textContent = "0問";
         el.sideCombo.textContent = "0";
-        el.sideRank.textContent = rankForScore(0).label;
-        updateMascotRank(rankForScore(0), 0);
+        updateHomeRank();
         el.progressText.textContent = "スタート待ち";
         el.modeText.textContent = "モード選択";
         el.missionLabel.textContent = "任務選択";
@@ -5103,7 +5116,7 @@ window.QUIZ_QUESTIONS = [
 
       initializeParticipantCount();
       updateBestDisplay();
-      updateMascotRank(rankForScore(0), 0);
+      updateHomeRank();
       el.sideTotal.textContent = `${questions.length || 50}問`;
     })();
   </script>
